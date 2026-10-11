@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/widget_bg_dark_glass">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Availo Controls"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/btn_master"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Master Off"
+            android:textSize="10sp"
+            android:layout_margin="2dp"
+            android:backgroundTint="#80000000"
+            android:textColor="#FFFFFF"/>
+        <Button
+            android:id="@+id/btn_ghost"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Ghost"
+            android:textSize="10sp"
+            android:layout_margin="2dp"
+            android:backgroundTint="#80000000"
+            android:textColor="#FFFFFF"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/btn_pause"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Pause 1hr"
+            android:textSize="10sp"
+            android:layout_margin="2dp"
+            android:backgroundTint="#80000000"
+            android:textColor="#FFFFFF"/>
+        <Button
+            android:id="@+id/btn_dnd"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="DND Bypass"
+            android:textSize="10sp"
+            android:layout_margin="2dp"
+            android:backgroundTint="#80000000"
+            android:textColor="#FFFFFF"/>
+    </LinearLayout>
+
+</LinearLayout>
