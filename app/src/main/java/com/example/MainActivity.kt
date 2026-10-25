@@ -154,7 +154,7 @@ class MainActivity : FragmentActivity() {
 
 sealed class Screen(val route: String, val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
     object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Home)
-    object Protect : Screen("shield", "Shield", Icons.Default.Security)
+    object Protect : Screen("protect", "Call Guard", Icons.Default.Security)
     object Connect : Screen("connect", "Connect", Icons.Default.ChatBubble)
     object Schedule : Screen("schedule", "Schedule", Icons.Default.Schedule)
     object Automation : Screen("automation", "Automations", Icons.Default.Link)
@@ -501,9 +501,9 @@ fun MainScreen(viewModel: MainViewModel, widthSizeClass: WindowWidthSizeClass, s
                 Text(
                     when (route) {
                         Screen.Dashboard.route -> "Dashboard & VIPs"
-                        Screen.Protect.route -> "Shield & Block"
-                        Screen.Connect.route -> "Automate & Connect"
-                        Screen.Schedule.route -> "Schedule Tasks"
+                        Screen.Protect.route -> "Call Guard & Screening"
+                        Screen.Connect.route -> "WhatsApp Auto-Reply & Rules"
+                        Screen.Schedule.route -> "Schedule & Focus"
                         else -> "Information"
                     }
                 )
@@ -511,10 +511,10 @@ fun MainScreen(viewModel: MainViewModel, widthSizeClass: WindowWidthSizeClass, s
             text = {
                 Text(
                     when (route) {
-                        Screen.Dashboard.route -> "The Dashboard gives you an overview of app activity. Here, you can also add VIP contacts. VIPs can bypass Do Not Disturb mode so you never miss an emergency. This requires Notification Access to manage DND and Read Call Log/Contacts to identify VIPs."
-                        Screen.Protect.route -> "Shield allows you to block specific phone numbers or prefixes entirely. This keeps your phone quiet from known spammers. It requires Call Screening permissions to intercept and reject calls."
-                        Screen.Connect.route -> "Connect lets you forward important calls to another phone number. This requires Call Log permissions."
-                        Screen.Schedule.route -> "Schedule allows you to set up messages to be sent at a later time. You can pre-plan SMS or WhatsApp messages. This requires SMS permissions to send texts on your behalf."
+                        Screen.Dashboard.route -> "The Dashboard gives you an overview of recent activity, screening metrics, and VIP contacts. VIPs and allowed starred contacts bypass Do Not Disturb so you never miss an emergency."
+                        Screen.Protect.route -> "Call Guard blocks known spam numbers, telemarketers, and unknown callers silently using Android's native Call Screening Service. 100% on-device with zero battery drain."
+                        Screen.Connect.route -> "Connect allows you to set intelligent, automated auto-replies for WhatsApp and WhatsApp Business with custom contact rules and keywords."
+                        Screen.Schedule.route -> "Schedule lets you automate your availability: set Sleep Hours (Night Guard), sync DND with your Google Calendar meetings, and set WhatsApp dispatch reminders."
                         else -> "Features require specific permissions only when you use them."
                     }
                 )
@@ -537,9 +537,26 @@ fun UniversalAddMenuContent(onDismiss: () -> Unit, navController: androidx.navig
     val scope = rememberCoroutineScope()
     
     val ghostMode by settingsRepo.ghostMode.collectAsState(initial = false)
-    
+    var showStarredDialog by remember { mutableStateOf(false) }
     var selectedDuration by remember { mutableStateOf(1) } // in hours
     
+    if (showStarredDialog) {
+        val settingsViewModel: com.example.ui.viewmodels.SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+            factory = com.example.ui.viewmodels.SettingsViewModel.Factory(settingsRepo)
+        )
+        val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+        com.example.ui.screens.StarredContactsDialog(
+            currentAllowed = settingsState.allowedStarredDndContacts,
+            currentMode = settingsState.starredDndSelectionMode,
+            onDismiss = { showStarredDialog = false },
+            onSave = { contactsCsv, mode ->
+                settingsViewModel.updateAllowedStarredDndContacts(contactsCsv)
+                settingsViewModel.updateStarredDndSelectionMode(mode)
+                showStarredDialog = false
+            }
+        )
+    }
+
     val contactPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickContact()) { uri ->
         if (uri != null) {
             scope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -579,14 +596,14 @@ fun UniversalAddMenuContent(onDismiss: () -> Unit, navController: androidx.navig
         if (ghostMode) {
             Column {
                 Text(
-                    "Shield is Active",
+                    "Silent Guard is Active",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "All non-VIP calls and messages are being silently blocked.",
+                    "All non-VIP calls are being silently screened. Peace of mind is active.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -596,7 +613,7 @@ fun UniversalAddMenuContent(onDismiss: () -> Unit, navController: androidx.navig
                 onClick = {
                     scope.launch {
                         settingsRepo.updateBoolean(com.example.data.repository.SettingsRepository.GHOST_MODE, false)
-                        android.widget.Toast.makeText(context, "Shield Deactivated", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "Silent Guard Deactivated", android.widget.Toast.LENGTH_SHORT).show()
                         onDismiss()
                     }
                 },
@@ -606,19 +623,19 @@ fun UniversalAddMenuContent(onDismiss: () -> Unit, navController: androidx.navig
             ) {
                 Icon(Icons.Rounded.Block, contentDescription = null, modifier = Modifier.size(24.dp))
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Turn Off Shield", style = MaterialTheme.typography.titleMedium)
+                Text("Turn Off Silent Guard", style = MaterialTheme.typography.titleMedium)
             }
         } else {
             Column {
                 Text(
-                    "Activate Shield",
+                    "Activate Silent Guard",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Block all calls and texts. VIPs and emergencies will bypass.",
+                    "Screen out unsaved and spam callers silently. VIPs and emergency repeat callers bypass.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -651,23 +668,23 @@ fun UniversalAddMenuContent(onDismiss: () -> Unit, navController: androidx.navig
                 Card(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                    modifier = Modifier.fillMaxWidth().clickable { contactPickerLauncher.launch(null) }
+                    modifier = Modifier.fillMaxWidth().clickable { showStarredDialog = true }
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Starred Contacts (VIPs)", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                            Text("Tap to add a new VIP", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Allowed Starred VIPs", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                            Text("Filter specific contacts permitted through DND", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp)) {
-                    Icon(Icons.Rounded.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Emergency SMS with 'URGENT' will override.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Persistent callers calling multiple times will override.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
     
@@ -677,7 +694,7 @@ fun UniversalAddMenuContent(onDismiss: () -> Unit, navController: androidx.navig
                         val endTime = System.currentTimeMillis() + (selectedDuration * 60 * 60 * 1000L)
                         settingsRepo.updateBoolean(com.example.data.repository.SettingsRepository.GHOST_MODE, true)
                         settingsRepo.updateLong(com.example.data.repository.SettingsRepository.GHOST_MODE_PAUSE_END_TIME, 0L)
-                        android.widget.Toast.makeText(context, "Shield Activated for $selectedDuration hours", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, "Silent Guard Activated for $selectedDuration hours", android.widget.Toast.LENGTH_SHORT).show()
                         onDismiss()
                     }
                 },
@@ -687,7 +704,7 @@ fun UniversalAddMenuContent(onDismiss: () -> Unit, navController: androidx.navig
             ) {
                 Icon(Icons.Rounded.Shield, contentDescription = null, modifier = Modifier.size(24.dp))
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Start Shield", style = MaterialTheme.typography.titleMedium)
+                Text("Start Silent Guard", style = MaterialTheme.typography.titleMedium)
             }
         }
     }

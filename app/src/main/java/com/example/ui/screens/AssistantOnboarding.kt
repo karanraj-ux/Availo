@@ -101,7 +101,7 @@ fun AssistantOnboardingScreen(onComplete: (String?) -> Unit) {
             ) {
                 Box(modifier = Modifier.weight(1f)) {
                     TabCard(
-                        title = "Focus Shield",
+                        title = "Focus Guard",
                         description = "Reject unknown WhatsApp & phone calls automatically.",
                         icon = Icons.Default.Security,
                         iconColor = MaterialTheme.colorScheme.error,
@@ -128,7 +128,7 @@ fun AssistantOnboardingScreen(onComplete: (String?) -> Unit) {
                 Box(modifier = Modifier.weight(1f)) {
                     TabCard(
                         title = "Auto-Reply",
-                        description = "Instant reply over internet for WhatsApp & SMS.",
+                        description = "Instant replies over the internet for WhatsApp & WhatsApp Business.",
                         icon = Icons.Default.ChatBubble,
                         iconColor = MaterialTheme.colorScheme.tertiary,
                         isCompact = true
@@ -136,8 +136,8 @@ fun AssistantOnboardingScreen(onComplete: (String?) -> Unit) {
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     TabCard(
-                        title = "Schedule SMS",
-                        description = "Local on-device scheduled SMS without cloud servers.",
+                        title = "Focus Sync",
+                        description = "Google Calendar sync and timed focus modes on device.",
                         icon = Icons.Default.Schedule,
                         iconColor = MaterialTheme.colorScheme.secondary,
                         isCompact = true

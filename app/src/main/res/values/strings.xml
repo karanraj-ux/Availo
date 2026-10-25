@@ -11,7 +11,7 @@
     <string name="home_total">Total</string>
     <string name="home_recent_logs">Recent Inbox Logs</string>
     <string name="home_kj_quick_pin">KJ Quick Pin</string>
-    <string name="accessibility_service_description">Availo Smart Spam Reader: Detects incoming spam calls flagged by Truecaller and instantly blocks them.</string>
+    <string name="accessibility_service_description">Availo Call Guard: Detects incoming spam calls and telemarketers to screen them silently on-device.</string>
 
     <!-- Centralized Repository & Project Metadata (Update here when changing repo name or owner) -->
     <string name="repo_url">https://github.com/karanraj-ux/availo</string>

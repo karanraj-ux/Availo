@@ -37,27 +37,12 @@ class ScheduledTaskWorker(appContext: Context, workerParams: WorkerParameters) :
         try {
             when (task.type) {
                 "SMS" -> {
-                    val smsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        applicationContext.getSystemService(SmsManager::class.java)
-                    } else {
-                        @Suppress("DEPRECATION") SmsManager.getDefault()
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("smsto:${task.target}")
+                        putExtra("sms_body", task.message ?: "")
                     }
-                    val settingsRepo = (applicationContext as ShieldApplication).container.settingsRepository
-                    val rawContent = task.message ?: ""
-                    val content = MessageDispatcherHelper.resolveDynamicPlaceholders(
-                        context = applicationContext,
-                        template = rawContent,
-                        senderName = task.target,
-                        senderNumber = task.target,
-                        settingsRepo = settingsRepo
-                    )
-                    val parts = smsManager.divideMessage(content)
-                    if (parts.size > 1) {
-                        smsManager.sendMultipartTextMessage(task.target, null, parts, null, null)
-                    } else {
-                        smsManager.sendTextMessage(task.target, null, content, null, null)
-                    }
-                    Log.d("ScheduledTaskWorker", "Sent scheduled SMS to ${task.target}")
+                    showTapToLaunchNotification(applicationContext, "Scheduled Message", "Tap to review & send message to ${task.target}", intent, taskId)
+                    Log.d("ScheduledTaskWorker", "Posted message notification for ${task.target}")
                 }
                 "Call" -> {
                     val intent = Intent(Intent.ACTION_CALL)

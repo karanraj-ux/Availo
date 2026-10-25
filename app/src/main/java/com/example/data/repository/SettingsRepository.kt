@@ -106,6 +106,13 @@ class SettingsRepository(private val context: Context) {
         val SLEEP_START_MINUTE = intPreferencesKey("sleep_start_minute")
         val SLEEP_END_HOUR = intPreferencesKey("sleep_end_hour")
         val SLEEP_END_MINUTE = intPreferencesKey("sleep_end_minute")
+
+        // Starred Contacts Granular DND Bypass
+        val ALLOWED_STARRED_DND_CONTACTS = stringPreferencesKey("allowed_starred_dnd_contacts")
+        val STARRED_DND_SELECTION_MODE = stringPreferencesKey("starred_dnd_selection_mode")
+
+        // Rate Limiting & Loop Defense
+        val AUTO_REPLY_HOURLY_LIMIT_PER_CONTACT = intPreferencesKey("auto_reply_hourly_limit_per_contact")
     }
 
     val preferencesFlow: Flow<Preferences> = context.dataStore.data

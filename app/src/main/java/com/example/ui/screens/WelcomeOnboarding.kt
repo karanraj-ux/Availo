@@ -123,7 +123,7 @@ fun WelcomeOnboardingScreen(onComplete: () -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 WelcomeFeatureItem(
                     icon = Icons.Default.Security,
-                    title = "Focus Shield & Call Gatekeeper",
+                    title = "Focus Guard & Call Gatekeeper",
                     description = "Reject unknown WhatsApp & phone calls automatically when focus mode is on."
                 )
                 WelcomeFeatureItem(

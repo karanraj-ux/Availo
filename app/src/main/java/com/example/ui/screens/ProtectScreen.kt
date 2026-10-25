@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Quickreply
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.SettingsAccessibility
 import androidx.compose.material.icons.filled.Warning
@@ -117,7 +118,7 @@ fun ProtectScreen(viewModel: MainViewModel) {
                     Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (!settingsState.masterKillSwitch) "Shield Protection Active" else "All Defenses Paused",
+                            text = if (!settingsState.masterKillSwitch) "Availo Protection Active" else "All Defenses Paused",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = if (!settingsState.masterKillSwitch) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onErrorContainer
@@ -133,7 +134,7 @@ fun ProtectScreen(viewModel: MainViewModel) {
                         checked = !settingsState.masterKillSwitch,
                         onCheckedChange = { isChecked ->
                             settingsViewModel.updateMasterKillSwitch(!isChecked)
-                            scope.launch { snackbarHostState.showSnackbar(if (isChecked) "Shield Activated" else "App Defenses Paused") }
+                            scope.launch { snackbarHostState.showSnackbar(if (isChecked) "Protection Activated" else "App Defenses Paused") }
                         },
                         colors = SwitchDefaults.colors(
                             checkedTrackColor = MaterialTheme.colorScheme.primary,
@@ -161,13 +162,13 @@ fun ProtectScreen(viewModel: MainViewModel) {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text(
-                        text = "Shield Defense",
+                        text = "Call Guard Defense",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Advanced spam & caller blocking",
+                        text = "Native telecom call screening & spam deflection",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -250,96 +251,7 @@ fun ProtectScreen(viewModel: MainViewModel) {
                 }
             }
         }
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.05f))
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), RoundedCornerShape(24.dp)),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(Color(0xFFFF7043).copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Rounded.Warning, contentDescription = null, tint = Color(0xFFFF7043))
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Truecaller Smart Spam",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Switch(
-                            checked = settingsState.smartSpamReader,
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) {
-                                    ghostModePermissionsLauncher.launch(
-                                        arrayOf(Manifest.permission.ANSWER_PHONE_CALLS)
-                                    )
-                                    val nlIntent = android.content.Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-                                    try {
-                                        context.startActivity(nlIntent)
-                                        scope.launch { snackbarHostState.showSnackbar("Please allow Notification Access for Shield.") }
-                                    } catch (e: Exception) {
-                                        // Ignore if activity not found
-                                    }
-                                } else {
-                                    scope.launch { snackbarHostState.showSnackbar("Smart Spam Reader Disabled") }
-                                }
-                                settingsViewModel.updateSmartSpamReader(isChecked)
-                            },
-                            colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFFFF7043))
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Acts like Premium Truecaller. Reads the screen to instantly cut known red-flag spam before it even rings.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        lineHeight = 20.sp
-                    )
-                    
-                    Spacer(modifier = Modifier.height(20.dp))
-                    
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().clickable { 
-                            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-                            context.startActivity(intent)
-                        }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.SettingsAccessibility, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Grant Accessibility Access", 
-                                style = MaterialTheme.typography.labelMedium, 
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        
+
         
         item {
             Card(
@@ -359,7 +271,7 @@ fun ProtectScreen(viewModel: MainViewModel) {
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            "Why use Shield?",
+                            "Why Choose Availo?",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -368,21 +280,21 @@ fun ProtectScreen(viewModel: MainViewModel) {
                     Spacer(modifier = Modifier.height(24.dp))
                     
                     BenefitRow(
-                        icon = Icons.Rounded.MoneyOff,
-                        title = "Save on Subscriptions",
-                        description = "Get premium spam blocking for free. No Truecaller Premium needed."
+                        icon = Icons.Default.Security,
+                        title = "Native Call Screening & Spam Defense",
+                        description = "Blocks unwanted spam, telemarketers, and unknown callers silently with Android's official telecom engine."
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     BenefitRow(
                         icon = Icons.Rounded.PrivacyTip,
-                        title = "100% On-Device",
-                        description = "We don't upload your contacts to cloud servers, unlike other apps."
+                        title = "100% On-Device Privacy",
+                        description = "Zero cloud uploads. Your contacts and private communication never leave your device."
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     BenefitRow(
-                        icon = Icons.Rounded.Star,
-                        title = "No Ads, No Clutter",
-                        description = "A clean experience focused strictly on protecting your peace."
+                        icon = Icons.Default.Quickreply,
+                        title = "WhatsApp & Focus Auto-Responder",
+                        description = "Smart automated replies for WhatsApp direct messages, calendar focus sync, and granular Starred Contacts DND rules."
                     )
                 }
             }

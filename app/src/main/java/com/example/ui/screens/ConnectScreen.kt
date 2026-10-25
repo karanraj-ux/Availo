@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.MainViewModel
@@ -119,26 +120,19 @@ fun AutoReplyTab(viewModel: MainViewModel) {
     )
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
 
-    val hasSmsPerm = androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
     val hasCallLogPerm = androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == android.content.pm.PackageManager.PERMISSION_GRANTED
     val hasPhoneStatePerm = androidx.core.content.ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val smsGranted = permissions[Manifest.permission.SEND_SMS] == true
         val callLogGranted = permissions[Manifest.permission.READ_CALL_LOG] == true
         val phoneStateGranted = permissions[Manifest.permission.READ_PHONE_STATE] == true
         
-        if (smsGranted && (callLogGranted || phoneStateGranted)) {
+        if (callLogGranted || phoneStateGranted) {
             settingsViewModel.updateAutoRespondMissedCall(true)
-            settingsViewModel.updateAutoRespondSms(true)
-        } else if (smsGranted) {
-            settingsViewModel.updateAutoRespondSms(true)
-            settingsViewModel.updateAutoRespondMissedCall(false)
         } else {
             settingsViewModel.updateAutoRespondMissedCall(false)
-            settingsViewModel.updateAutoRespondSms(false)
         }
     }
 
@@ -148,10 +142,8 @@ fun AutoReplyTab(viewModel: MainViewModel) {
                 showPrivacyPledge = false
                 permissionLauncher.launch(
                     arrayOf(
-                        Manifest.permission.SEND_SMS,
                         Manifest.permission.READ_CALL_LOG,
-                        Manifest.permission.READ_PHONE_STATE,
-                        Manifest.permission.RECEIVE_SMS
+                        Manifest.permission.READ_PHONE_STATE
                     )
                 )
             },
@@ -214,143 +206,40 @@ fun AutoReplyTab(viewModel: MainViewModel) {
         verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        // 1. Top Section: Triggers & Explanation
+        // 1. Top Section: WhatsApp Auto-Reply Main Toggle
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
+                    .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
-                Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(
-                        "When to Auto-Reply",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        "Choose the triggers that prompt Availo to send an automated SMS reply.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-
-                    // Missed Calls Trigger
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Rounded.PhoneMissed, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "On Missed Phone Calls",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                "Sends an SMS when you miss a call",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = settingsState.autoRespondMissedCall,
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) {
-                                    if (hasSmsPerm && (hasCallLogPerm || hasPhoneStatePerm)) {
-                                        settingsViewModel.updateAutoRespondMissedCall(true)
-                                    } else {
-                                        showPrivacyPledge = true
-                                    }
-                                } else {
-                                    settingsViewModel.updateAutoRespondMissedCall(false)
-                                }
-                            },
-                            colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
-                        )
-                    }
-                    
-                    // Incoming SMS Trigger
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Rounded.Sms, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "On Incoming SMS Messages",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                "Sends an SMS reply when someone texts you",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = settingsState.autoRespondSms,
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) {
-                                    if (hasSmsPerm) {
-                                        settingsViewModel.updateAutoRespondSms(true)
-                                    } else {
-                                        showPrivacyPledge = true
-                                    }
-                                } else {
-                                    settingsViewModel.updateAutoRespondSms(false)
-                                }
-                            },
-                            colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
-                        )
-                    }
-
-                    // Incoming WhatsApp Trigger
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
+                                .size(44.dp)
                                 .background(Color(0xFF25D366).copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Message, contentDescription = null, tint = Color(0xFF25D366))
+                            Icon(Icons.Default.Quickreply, contentDescription = null, tint = Color(0xFF25D366))
                         }
-                        Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "On Incoming WhatsApp Chats",
-                                style = MaterialTheme.typography.titleSmall,
+                                "WhatsApp & Business Auto-Reply",
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                "Direct offline auto-reply via notification listener",
+                                if (settingsState.autoRespondWhatsapp) "Active • Responds using on-device rules" else "Paused • Tap switch to activate",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (settingsState.autoRespondWhatsapp) Color(0xFF075E54) else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
@@ -373,205 +262,26 @@ fun AutoReplyTab(viewModel: MainViewModel) {
                         )
                     }
 
-                    if (!settingsState.autoRespondMissedCall && !settingsState.autoRespondSms && !settingsState.autoRespondWhatsapp) {
-                        Text(
-                            "Turn on one or more triggers above to activate smart auto-replies.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-        }
-
-        // WhatsApp Offline Bot & Message Interpreter Card
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(22.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .background(Color(0xFF25D366).copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.Quickreply, contentDescription = null, tint = Color(0xFF25D366))
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    "Enable WhatsApp Auto-Reply",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    "Instant replies over the internet • 3 recipient tiers",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF25D366),
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-                        Switch(
-                            checked = settingsState.autoRespondWhatsapp,
-                            onCheckedChange = { isChecked ->
-                                settingsViewModel.updateAutoRespondWhatsapp(isChecked)
-                            },
-                            colors = SwitchDefaults.colors(checkedTrackColor = Color(0xFF25D366))
-                        )
-                    }
-
-                    Text(
-                        "When Focus Mode is on, Availo rejects unknown WhatsApp calls, allows starred/VIP contacts through DND silent mode, and instantly sends your chosen auto-reply message over the internet to incoming chats.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-
-                    // Showcase: Everyday WhatsApp Sleep / Morning Auto-Reply
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF075E54).copy(alpha = 0.08f)),
-                        border = BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.3f))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.ChatBubble, contentDescription = null, tint = Color(0xFF25D366), modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Everyday Example: Peaceful Morning & Sleep Shield",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            Text(
-                                "When someone texts 'Good morning!' while you are asleep or in focus mode, Availo answers instantly over the internet with your pre-set response:",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-
-                            // Simulated Incoming WhatsApp Bubble
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = RoundedCornerShape(topStart = 0.dp, topEnd = 12.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
-                                ) {
-                                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                        Text("Friend / Partner", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFF25D366))
-                                        Text("Good morning! Are you awake yet? ☕", style = MaterialTheme.typography.bodySmall)
-                                        Text("07:15 AM", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.align(Alignment.End))
-                                    }
-                                }
-                            }
-
-                            // Simulated Auto-Reply WhatsApp Bubble
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                Surface(
-                                    color = Color(0xFFDCF8C6),
-                                    shape = RoundedCornerShape(topStart = 12.dp, topEnd = 0.dp, bottomStart = 12.dp, bottomEnd = 12.dp)
-                                ) {
-                                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                        Text("Availo (Auto-Reply)", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFF075E54))
-                                        Text("Still resting! Phone is on silent until 8:30 AM. Will catch up shortly ☀️", style = MaterialTheme.typography.bodySmall, color = Color.Black)
-                                        Row(modifier = Modifier.align(Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-                                            Text("07:15 AM", style = MaterialTheme.typography.labelSmall, color = Color.DarkGray)
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Icon(Icons.Rounded.DoneAll, contentDescription = null, tint = Color(0xFF34B7F1), modifier = Modifier.size(14.dp))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-
-                    // WhatsApp Specific Target Rule Quick Action
-                    val whatsAppRules = settingsState.numberReplyRules.filter { it.isGroup }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "WhatsApp Target Rules",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                if (whatsAppRules.isEmpty()) "0 group rules active • Tap + to configure" else "${whatsAppRules.size} group ${if (whatsAppRules.size == 1) "rule" else "rules"} active",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFF075E54),
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                        Button(
-                            onClick = {
-                                editingRule = NumberReplyRule(
-                                    name = "",
-                                    number = "",
-                                    isGroup = true,
-                                    action = NumberReplyRule.ACTION_REPLY,
-                                    replies = listOf("Currently away from WhatsApp in focus mode. Will get back to you shortly.")
-                                )
-                                showRuleDialog = true
-                            },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF25D366),
-                                contentColor = Color.White
-                            ),
+                    if (!settingsState.autoRespondWhatsapp) {
+                        Surface(
                             shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Icon(Icons.Filled.Add, contentDescription = "Add WhatsApp Rule", tint = Color.White, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("+ Add WhatsApp Rule", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-
-                    if (whatsAppRules.isNotEmpty()) {
-                        androidx.compose.foundation.lazy.LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(whatsAppRules.size) { idx ->
-                                val rule = whatsAppRules[idx]
-                                SuggestionChip(
-                                    onClick = {
-                                        editingRule = rule
-                                        showRuleDialog = true
-                                    },
-                                    label = { Text(rule.name.ifBlank { "Group" }.take(20), style = MaterialTheme.typography.labelSmall) },
-                                    icon = { Icon(Icons.Rounded.Group, contentDescription = null, tint = Color(0xFF25D366), modifier = Modifier.size(14.dp)) }
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Rounded.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Turn on WhatsApp Auto-Reply to automatically respond to messages based on your custom rules below.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
                     }
-
                 }
             }
         }
@@ -1092,17 +802,7 @@ fun AutoReplyTab(viewModel: MainViewModel) {
                                             shape = RoundedCornerShape(12.dp),
                                             singleLine = true
                                         )
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Checkbox(
-                                                checked = dlgReplySms,
-                                                onCheckedChange = { dlgReplySms = it }
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Also apply rule to incoming SMS", style = MaterialTheme.typography.bodySmall)
-                                        }
+
                                     } else {
                                         OutlinedTextField(
                                             value = dlgName,
@@ -1372,26 +1072,7 @@ fun AutoReplyTab(viewModel: MainViewModel) {
                                 )
                             }
 
-                            // Opt-In Switch: Fallback SMS
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Reply to unlisted mobile SMS", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
-                                    Text("Never replies to bank shortcodes or OTPs", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Switch(
-                                    checked = settingsState.fallbackReplyAllSms,
-                                    onCheckedChange = { settingsViewModel.updateFallbackReplyAllSms(it) }
-                                )
-                            }
-
-                            AnimatedVisibility(visible = fallbackExpanded || settingsState.fallbackReplyAllWhatsapp || settingsState.fallbackReplyAllSms) {
+                            AnimatedVisibility(visible = fallbackExpanded || settingsState.fallbackReplyAllWhatsapp) {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
                                     Text(
                                         "Fallback Messages by Relationship Tier",
@@ -1452,70 +1133,149 @@ fun AutoReplyTab(viewModel: MainViewModel) {
                     ) {
                         Column(
                             modifier = Modifier.padding(20.dp).fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Rounded.Security, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Safety & Rate-Limiting Rules", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                             }
+
+                            // Configurable per-contact hourly limit (Default 3-5, user adjustable)
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "Hourly Reply Limit per Contact",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                        ) {
+                                            Text(
+                                                text = if (settingsState.autoReplyHourlyLimitPerContact == 0) "Unlimited" else "${settingsState.autoReplyHourlyLimitPerContact} / hr",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Text(
+                                        "Controls maximum auto-replies sent to the same sender within 1 hour to prevent message loops. Defaults to 3–5 per contact.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (settingsState.autoReplyHourlyLimitPerContact == 0) "Unlimited replies" else "${settingsState.autoReplyHourlyLimitPerContact} per contact / hour",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            FilledTonalIconButton(
+                                                onClick = {
+                                                    val current = settingsState.autoReplyHourlyLimitPerContact
+                                                    if (current > 1) {
+                                                        settingsViewModel.updateAutoReplyHourlyLimitPerContact(current - 1)
+                                                    } else if (current == 1) {
+                                                        settingsViewModel.updateAutoReplyHourlyLimitPerContact(0)
+                                                    }
+                                                },
+                                                modifier = Modifier.size(36.dp)
+                                            ) {
+                                                Icon(Icons.Rounded.Remove, contentDescription = "Decrease limit", modifier = Modifier.size(18.dp))
+                                            }
+                                            Text(
+                                                text = if (settingsState.autoReplyHourlyLimitPerContact == 0) "∞" else "${settingsState.autoReplyHourlyLimitPerContact}",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 8.dp)
+                                            )
+                                            FilledTonalIconButton(
+                                                onClick = {
+                                                    val current = settingsState.autoReplyHourlyLimitPerContact
+                                                    if (current == 0) {
+                                                        settingsViewModel.updateAutoReplyHourlyLimitPerContact(1)
+                                                    } else if (current < 100) {
+                                                        settingsViewModel.updateAutoReplyHourlyLimitPerContact(current + 1)
+                                                    }
+                                                },
+                                                modifier = Modifier.size(36.dp)
+                                            ) {
+                                                Icon(Icons.Rounded.Add, contentDescription = "Increase limit", modifier = Modifier.size(18.dp))
+                                            }
+                                        }
+                                    }
+
+                                    val limitOptions = listOf(
+                                        1 to "1",
+                                        3 to "3 (Default)",
+                                        5 to "5",
+                                        10 to "10",
+                                        0 to "No Limit"
+                                    )
+
+                                    FlowRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                                    ) {
+                                        limitOptions.forEach { (limitVal, label) ->
+                                             val isSelected = settingsState.autoReplyHourlyLimitPerContact == limitVal
+                                             FilterChip(
+                                                 selected = isSelected,
+                                                 onClick = { settingsViewModel.updateAutoReplyHourlyLimitPerContact(limitVal) },
+                                                 label = { Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium) },
+                                                 colors = FilterChipDefaults.filterChipColors(
+                                                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                                 )
+                                             )
+                                         }
+                                    }
+                                }
+                            }
+
                             Text(
-                                "• WhatsApp Groups: 100% ignored unless explicitly added to your ruleset.\n• Transactional & OTP SMS: Banks, delivery bots, and shortcodes are never auto-replied.\n• Burst & Loop Protection: Max 3 replies per contact/hour with message fingerprinting.\n• Telecom Limit Safeguard: Hard limit of 20 SMS/hour to protect your carrier plan.",
+                                text = "• WhatsApp & WA Business: 100% automated replies for direct chats.\n" +
+                                        "• WhatsApp Groups: Completely ignored unless explicitly added to your ruleset.\n" +
+                                        "• Anti-Loop Protection: ${if (settingsState.autoReplyHourlyLimitPerContact == 0) "Unlimited replies allowed" else "Capped at ${settingsState.autoReplyHourlyLimitPerContact} replies per contact/hour"} with duplicate message fingerprinting.\n" +
+                                        "• 100% On-Device: Processed locally through Android Notification Listener with zero cloud telemetry.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 18.sp
                             )
                         }
                     }
                 }
             }
         
-        // 3. Premium Explanation Card
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.05f)),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.AutoAwesome, 
-                            contentDescription = null, 
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            "Why use Auto-Responder?",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    
-                    BenefitRow(
-                        icon = Icons.Rounded.Favorite,
-                        title = "Polite Professionalism",
-                        description = "Never leave someone hanging. Automatically acknowledge important calls when you're busy."
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    BenefitRow(
-                        icon = Icons.Rounded.PrivacyTip,
-                        title = "100% On-Device",
-                        description = "Your contacts and messages are never sent to a cloud server."
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    BenefitRow(
-                        icon = Icons.Rounded.SettingsSuggest,
-                        title = "Smart Context",
-                        description = "Only replies to actual missed calls, not spam or blocked numbers."
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -1539,7 +1299,6 @@ fun ForwardingTab(viewModel: MainViewModel) {
         )
     )
     val rules by ruleViewModel.rules.collectAsStateWithLifecycle(initialValue = emptyList())
-    var showInboxPicker by remember { mutableStateOf(false) }
 
     
 
@@ -1592,32 +1351,11 @@ fun ForwardingTab(viewModel: MainViewModel) {
     }
 
 
-        val smsForwardPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
-        val sendGranted = results[Manifest.permission.SEND_SMS] == true
-        val receiveGranted = results[Manifest.permission.RECEIVE_SMS] == true
-        val readGranted = results[Manifest.permission.READ_SMS] == true
-        if (sendGranted && receiveGranted && readGranted) {
-            settingsViewModel.updateSmsForwardingEnabled(true)
-        } else {
-            scope.launch { snackbarHostState.showSnackbar("SMS Send, Receive, and Read permissions are required") }
-        }
-    }
-
     val contactsPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         if (isGranted) {
             targetPhonePickerLauncher.launch(null)
         } else {
             scope.launch { snackbarHostState.showSnackbar("Contacts permission is required to pick a number") }
-        }
-    }
-    
-
-    
-    val smsPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        if (permissions[Manifest.permission.READ_SMS] == true) {
-            showInboxPicker = true
         }
     }
 
@@ -1766,7 +1504,7 @@ fun PrivacyPledgeDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Rounded.Security, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Privacy Pledge & Permissions", style = MaterialTheme.typography.titleLarge)
             }
@@ -1774,16 +1512,16 @@ fun PrivacyPledgeDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "Availo operates 100% offline on your device. We respect your privacy completely.",
+                    "Availo operates 100% on your device. We respect your privacy completely.",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "To enable the Auto-Responder and the 'URGENT' emergency keyword, we need SMS and Call Log access. Modern Android versions restrict these for security, but we need them specifically for these two features.",
+                    "To enable the WhatsApp Auto-Responder and VIP emergency caller screening, we check caller notifications and contact stars locally on your device.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    "• We DO NOT read your personal OTPs.\n• We DO NOT harvest your contacts.\n• Availo makes ZERO network requests to external servers.",
+                    "• Zero external network requests or tracking.\n• We DO NOT upload your contacts to cloud servers.\n• All screening & auto-reply decisions happen locally on-device.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )

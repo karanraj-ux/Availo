@@ -70,6 +70,7 @@ fun DashboardScreen(
     val scope = rememberCoroutineScope()
     var showAdvanced by remember { mutableStateOf(false) }
     var showContactPermissionRationale by remember { mutableStateOf(false) }
+    var showStarredDialog by remember { mutableStateOf(false) }
 
     val roleManagerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -207,10 +208,9 @@ fun DashboardScreen(
             isCallScreeningRoleHeld = true
         }
 
-        val hasSms = ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
         val hasCallLog = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
         val hasContacts = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
-        hasTelephonyPermissions = hasSms && hasCallLog && hasContacts
+        hasTelephonyPermissions = hasCallLog && hasContacts
     }
 
     val systemPermissionsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -316,9 +316,9 @@ fun DashboardScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            """• Ghost Mode & Shield
-• Silent Bypass
-• Auto-Responder""",
+                            """• Ghost Mode & Call Guard
+• Silent VIP Bypass
+• WhatsApp Auto-Responder""",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -337,6 +337,20 @@ fun DashboardScreen(
                     TextButton(onClick = { showDeveloperInfo = false }) {
                         Text("Close")
                     }
+                }
+            )
+        }
+
+        if (showStarredDialog) {
+            StarredContactsDialog(
+                currentAllowed = settingsState.allowedStarredDndContacts.ifBlank { settingsState.vipCallers },
+                currentMode = settingsState.starredDndSelectionMode,
+                onDismiss = { showStarredDialog = false },
+                onSave = { newAllowed, newMode ->
+                    settingsViewModel.updateAllowedStarredDndContacts(newAllowed)
+                    settingsViewModel.updateStarredDndSelectionMode(newMode)
+                    settingsViewModel.updateVipCallers(newAllowed)
+                    scope.launch { snackbarHostState.showSnackbar("Starred VIP list updated!") }
                 }
             )
         }
@@ -486,7 +500,7 @@ fun DashboardScreen(
                                 }
                             }
 
-                            // 3. Telephony & SMS
+                            // 3. Telephony & Contacts
                             if (!hasTelephonyPermissions) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -494,16 +508,13 @@ fun DashboardScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("Phone & SMS Access", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
-                                        Text("Needed for missed call detection & auto-reply", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f))
+                                        Text("Phone & Contacts Access", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
+                                        Text("Needed for caller screening & VIP contact detection", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f))
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
                                     FilledTonalButton(
                                         onClick = {
                                             val perms = mutableListOf(
-                                                Manifest.permission.RECEIVE_SMS,
-                                                Manifest.permission.SEND_SMS,
-                                                Manifest.permission.READ_SMS,
                                                 Manifest.permission.READ_CALL_LOG,
                                                 Manifest.permission.READ_CONTACTS,
                                                 Manifest.permission.READ_PHONE_STATE
@@ -634,7 +645,7 @@ fun DashboardScreen(
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = if (isGhostActive) "Shield Protection Active" else "Availo & Silent Guard",
+                                        text = if (isGhostActive) "Silent Guard Active" else "Availo Silent Guard",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isGhostActive) Color.White else MaterialTheme.colorScheme.onSurface
@@ -770,30 +781,61 @@ fun DashboardScreen(
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        // VIPs List
-                        val vips = remember(settingsState.vipCallers) {
-                            settingsState.vipCallers.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        // VIPs List & Granular Starred Filter
+                        val activeVips = remember(settingsState.allowedStarredDndContacts, settingsState.vipCallers) {
+                            val raw = settingsState.allowedStarredDndContacts.ifBlank { settingsState.vipCallers }
+                            raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    "Allowed Starred & VIPs",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    if (settingsState.starredDndSelectionMode == "ALL_STARRED") "Mode: All Starred Contacts bypass DND"
+                                    else "Mode: Specific chosen Starred contacts only",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFFFB300).copy(alpha = 0.15f),
+                                modifier = Modifier.clickable { showStarredDialog = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Filled.Star, contentDescription = null, tint = Color(0xFFFFB300), modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Change Mode", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                                }
+                            }
                         }
                         
-                        Text(
-                            "Important Contacts (Always Ring)",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
                         Spacer(modifier = Modifier.height(12.dp))
                         
-                        if (vips.isNotEmpty()) {
+                        if (activeVips.isNotEmpty()) {
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                vips.forEach { vip ->
+                                activeVips.forEach { vip ->
                                     InputChip(
                                         selected = true,
                                         onClick = { },
-                                        label = { Text(vip) },
+                                        label = { Text(vip.take(24)) },
                                         colors = InputChipDefaults.inputChipColors(
                                             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                                             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -803,7 +845,8 @@ fun DashboardScreen(
                                                 Icons.Default.Close,
                                                 contentDescription = "Remove Contact",
                                                 modifier = Modifier.size(16.dp).clickable {
-                                                    val newList = vips.filter { it != vip }.joinToString(",")
+                                                    val newList = activeVips.filter { it != vip }.joinToString(",")
+                                                    settingsViewModel.updateAllowedStarredDndContacts(newList)
                                                     settingsViewModel.updateVipCallers(newList)
                                                 }
                                             )
@@ -818,33 +861,52 @@ fun DashboardScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                                    .padding(16.dp),
+                                    .padding(14.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "No important contacts added yet. All calls will be silenced.",
+                                    if (settingsState.starredDndSelectionMode == "ALL_STARRED") "All contacts starred in your address book will ring through."
+                                    else "Tap 'Filter Starred' below to pick whom to allow through DND.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                 )
                             }
                         }
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        Button(
-                            onClick = { 
-                                if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED && androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.WRITE_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                    contactPickerLauncher.launch(null)
-                                } else {
-                                    showContactPermissionRationale = true
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape = RoundedCornerShape(12.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Add VIP Number (Bypasses All)")
+                            Button(
+                                onClick = { showStarredDialog = true },
+                                modifier = Modifier.weight(1f).height(46.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp)
+                            ) {
+                                Icon(Icons.Filled.Star, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Filter Starred", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                            }
+
+                            OutlinedButton(
+                                onClick = { 
+                                    if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED && androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.WRITE_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        contactPickerLauncher.launch(null)
+                                    } else {
+                                        showContactPermissionRationale = true
+                                    }
+                                },
+                                modifier = Modifier.weight(1f).height(46.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Add VIP", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -951,12 +1013,12 @@ fun DashboardScreen(
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     StatCard(
                         title = "Calls Deflected",
                         value = settingsState.spamBlockedCount.toString(),
-                        icon = Icons.Rounded.Shield,
+                        icon = Icons.Rounded.Security,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.weight(1f),
                         onClick = { navController.navigate(Screen.Protect.route) }
@@ -1076,7 +1138,7 @@ fun DashboardScreen(
                                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Rounded.Shield, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Rounded.VerifiedUser, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
@@ -1103,29 +1165,40 @@ fun StatCard(
 ) {
     Card(
         modifier = modifier
-            .shadow(3.dp, RoundedCornerShape(18.dp), spotColor = Color.Black.copy(alpha = 0.05f))
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f), RoundedCornerShape(18.dp))
+            .shadow(3.dp, RoundedCornerShape(16.dp), spotColor = Color.Black.copy(alpha = 0.05f))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .semantics { contentDescription = "$title is $value" },
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp).fillMaxWidth(),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.Start
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .background(color.copy(alpha = 0.12f), RoundedCornerShape(10.dp)),
+                    .size(32.dp)
+                    .background(color.copy(alpha = 0.12f), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                value, 
+                style = MaterialTheme.typography.titleLarge, 
+                fontWeight = FontWeight.ExtraBold, 
+                color = MaterialTheme.colorScheme.onSurface
+            )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            Text(
+                title, 
+                style = MaterialTheme.typography.labelSmall, 
+                color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
         }
     }
 }

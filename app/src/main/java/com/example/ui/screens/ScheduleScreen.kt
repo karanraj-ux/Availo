@@ -73,12 +73,11 @@ fun ScheduleScreen(viewModel: MainViewModel, onNavigateToAdd: () -> Unit, onNavi
     )
     val tasks by scheduleViewModel.scheduledTasks.collectAsStateWithLifecycle(initialValue = emptyList())
 
-    var type by remember { mutableStateOf("SMS") }
+    var type by remember { mutableStateOf("Silent Guard") }
     var target by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var showSmsPicker by remember { mutableStateOf(false) }
 
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = System.currentTimeMillis())
     val timePickerState = rememberTimePickerState()
@@ -95,9 +94,6 @@ fun ScheduleScreen(viewModel: MainViewModel, onNavigateToAdd: () -> Unit, onNavi
     }
 
     val contactPicker = contactPickerLauncher { number -> target = number }
-    val smsPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) showSmsPicker = true
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -283,17 +279,10 @@ fun ScheduleScreen(viewModel: MainViewModel, onNavigateToAdd: () -> Unit, onNavi
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             FilterChip(
-                                selected = type == "SMS",
-                                onClick = { type = "SMS" },
-                                label = { Text("SMS") },
-                                leadingIcon = { if (type == "SMS") Icon(Icons.Default.Message, null) },
-                                modifier = Modifier.weight(1f)
-                            )
-                            FilterChip(
-                                selected = type == "Call",
-                                onClick = { type = "Call" },
-                                label = { Text("Call") },
-                                leadingIcon = { if (type == "Call") Icon(Icons.Default.Call, null) },
+                                selected = type == "Silent Guard" || type == "Ghost Mode",
+                                onClick = { type = "Silent Guard" },
+                                label = { Text("Silent Guard") },
+                                leadingIcon = { if (type == "Silent Guard" || type == "Ghost Mode") Icon(Icons.Rounded.Security, null) },
                                 modifier = Modifier.weight(1f)
                             )
                             FilterChip(
@@ -303,16 +292,11 @@ fun ScheduleScreen(viewModel: MainViewModel, onNavigateToAdd: () -> Unit, onNavi
                                 leadingIcon = { if (type == "WhatsApp") Icon(Icons.Default.ChatBubble, null) },
                                 modifier = Modifier.weight(1f)
                             )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
                             FilterChip(
-                                selected = type == "Silent Guard" || type == "Ghost Mode",
-                                onClick = { type = "Silent Guard" },
-                                label = { Text("Silent Guard") },
-                                leadingIcon = { if (type == "Silent Guard" || type == "Ghost Mode") Icon(Icons.Rounded.Shield, null) },
+                                selected = type == "Call",
+                                onClick = { type = "Call" },
+                                label = { Text("Call") },
+                                leadingIcon = { if (type == "Call") Icon(Icons.Default.Call, null) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -345,7 +329,7 @@ fun ScheduleScreen(viewModel: MainViewModel, onNavigateToAdd: () -> Unit, onNavi
                             OutlinedTextField(
                                 value = message,
                                 onValueChange = { message = it },
-                                label = { Text(if (type == "WhatsApp") "WhatsApp Message Caption" else "SMS Message") },
+                                label = { Text(if (type == "WhatsApp") "WhatsApp Message Template" else "Task Note / Description") },
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 minLines = 2,
@@ -439,9 +423,8 @@ fun ScheduleScreen(viewModel: MainViewModel, onNavigateToAdd: () -> Unit, onNavi
                     ) {
                         val isSilentGuard = task.type == "Ghost Mode" || task.type == "Silent Guard"
                         val icon = when (task.type) {
-                            "SMS" -> Icons.Default.Message
                             "Call" -> Icons.Default.Call
-                            "Ghost Mode", "Silent Guard" -> Icons.Rounded.Shield
+                            "Ghost Mode", "Silent Guard" -> Icons.Rounded.Security
                             else -> Icons.Default.ChatBubble
                         }
                         Box(

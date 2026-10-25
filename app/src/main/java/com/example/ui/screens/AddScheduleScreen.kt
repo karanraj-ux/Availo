@@ -42,14 +42,11 @@ fun AddScheduleScreen(
     onSave: (type: String, target: String, message: String?, timeMillis: Long, isRecurring: Boolean, intervalMillis: Long) -> Unit
 ) {
     val context = LocalContext.current
-    var type by remember { mutableStateOf("SMS") }
+    var type by remember { mutableStateOf("Silent Guard") }
     var target by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    
-    var showSmsPicker by remember { mutableStateOf(false) }
-    
     var repeatOption by remember { mutableStateOf("None") }
     var expandedRepeat by remember { mutableStateOf(false) }
     val repeatOptions = listOf("None", "Daily", "Weekly")
@@ -74,30 +71,6 @@ fun AddScheduleScreen(
         if (type == "Call") return null
         val fullMsg = message.trim()
         return if (fullMsg.isNotEmpty()) fullMsg else null
-    }
-
-    val sendSmsPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) {
-            if ((type == "Silent Guard" || type == "Ghost Mode" || target.isNotBlank()) && selectedDateMillis != null && selectedHour != null) {
-                val cal = Calendar.getInstance().apply {
-                    timeInMillis = selectedDateMillis!!
-                    set(Calendar.HOUR_OF_DAY, selectedHour!!)
-                    set(Calendar.MINUTE, selectedMinute!!)
-                    set(Calendar.SECOND, 0)
-                }
-                onSave(
-                    if (type == "Silent Guard") "Silent Guard" else type,
-                    target,
-                    buildFinalMessage(),
-                    cal.timeInMillis,
-                    repeatOption != "None",
-                    if(repeatOption == "Daily") 86400000L else if(repeatOption == "Weekly") 604800000L else 0L
-                )
-            }
-        }
-    }
-    val smsPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) showSmsPicker = true
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -129,16 +102,7 @@ fun AddScheduleScreen(
                                 
                                 val finalMsg = buildFinalMessage()
                                 val saveType = if (type == "Silent Guard") "Silent Guard" else type
-                                
-                                if (type == "SMS") {
-                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-                                        sendSmsPermissionLauncher.launch(Manifest.permission.SEND_SMS)
-                                    } else {
-                                        onSave(saveType, target, finalMsg, cal.timeInMillis, repeatOption != "None", if(repeatOption == "Daily") 86400000L else if(repeatOption == "Weekly") 604800000L else 0L)
-                                    }
-                                } else {
-                                    onSave(saveType, target, finalMsg, cal.timeInMillis, repeatOption != "None", if(repeatOption == "Daily") 86400000L else if(repeatOption == "Weekly") 604800000L else 0L)
-                                }
+                                onSave(saveType, target, finalMsg, cal.timeInMillis, repeatOption != "None", if(repeatOption == "Daily") 86400000L else if(repeatOption == "Weekly") 604800000L else 0L)
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -165,17 +129,10 @@ fun AddScheduleScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     FilterChip(
-                        selected = type == "SMS",
-                        onClick = { type = "SMS" },
-                        label = { Text("SMS") },
-                        leadingIcon = { if (type == "SMS") Icon(Icons.Default.Message, null) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    FilterChip(
-                        selected = type == "Call",
-                        onClick = { type = "Call" },
-                        label = { Text("Call") },
-                        leadingIcon = { if (type == "Call") Icon(Icons.Default.Call, null) },
+                        selected = type == "Silent Guard" || type == "Ghost Mode",
+                        onClick = { type = "Silent Guard" },
+                        label = { Text("Silent Guard") },
+                        leadingIcon = { if (type == "Silent Guard" || type == "Ghost Mode") Icon(Icons.Default.Lock, null) },
                         modifier = Modifier.weight(1f)
                     )
                     FilterChip(
@@ -185,16 +142,11 @@ fun AddScheduleScreen(
                         leadingIcon = { if (type == "WhatsApp") Icon(Icons.Default.ChatBubble, null) },
                         modifier = Modifier.weight(1f)
                     )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
                     FilterChip(
-                        selected = type == "Silent Guard" || type == "Ghost Mode",
-                        onClick = { type = "Silent Guard" },
-                        label = { Text("Silent Guard") },
-                        leadingIcon = { if (type == "Silent Guard" || type == "Ghost Mode") Icon(Icons.Default.Lock, null) },
+                        selected = type == "Call",
+                        onClick = { type = "Call" },
+                        label = { Text("Call") },
+                        leadingIcon = { if (type == "Call") Icon(Icons.Default.Call, null) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -209,31 +161,12 @@ fun AddScheduleScreen(
                 ) {
                     FilledTonalButton(
                         onClick = { contactPicker() },
-                        modifier = Modifier.weight(1f).height(50.dp),
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(Icons.Default.Contacts, contentDescription = "Pick Contact")
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Contact")
-                    }
-                    
-                    if (type != "Call") {
-                        FilledTonalButton(
-                            onClick = { 
-                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED) {
-                                    showSmsPicker = true
-                                } else {
-                                    smsPermissionLauncher.launch(Manifest.permission.READ_SMS)
-                                }
-                            },
-                            modifier = Modifier.weight(1f).height(50.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
-                        ) {
-                            Icon(Icons.Default.Message, contentDescription = "Pick SMS")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Import SMS")
-                        }
+                        Text("Select Contact from Phonebook")
                     }
                 }
                 
@@ -250,7 +183,7 @@ fun AddScheduleScreen(
                     OutlinedTextField(
                         value = message,
                         onValueChange = { message = it },
-                        label = { Text(if (type == "WhatsApp") "WhatsApp Message Caption" else "SMS Message") },
+                        label = { Text(if (type == "WhatsApp") "WhatsApp Message Caption" else "Task Note / Reminder") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         minLines = 3,
@@ -343,16 +276,6 @@ fun AddScheduleScreen(
                 }) { Text("OK") }
             },
             dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancel") } }
-        )
-    }
-    
-    if (showSmsPicker) {
-        SmsPickerDialog(
-            onDismiss = { showSmsPicker = false },
-            onMessageSelected = { msg ->
-                message = msg
-                showSmsPicker = false
-            }
         )
     }
 }

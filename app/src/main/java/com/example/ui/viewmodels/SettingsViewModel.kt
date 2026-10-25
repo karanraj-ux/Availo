@@ -89,7 +89,10 @@ data class SettingsState(
     val autoReplyAttachedFileName: String = "",
     val autoReplyAttachedFileUrl: String = "",
     val autoReplyAttachLocation: Boolean = false,
-    val autoReplyAttachedFileType: String = "DOCUMENT"
+    val autoReplyAttachedFileType: String = "DOCUMENT",
+    val allowedStarredDndContacts: String = "",
+    val starredDndSelectionMode: String = "SELECTED_STARRED",
+    val autoReplyHourlyLimitPerContact: Int = 3
 )
 
 class SettingsViewModel(private val settingsRepository: SettingsRepository) : ViewModel() {
@@ -174,11 +177,29 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository) : Vi
                         autoReplyAttachedFileName = prefs[SettingsRepository.AUTO_REPLY_ATTACHED_FILE_NAME] ?: "",
                         autoReplyAttachedFileUrl = prefs[SettingsRepository.AUTO_REPLY_ATTACHED_FILE_URL] ?: "",
                         autoReplyAttachLocation = prefs[SettingsRepository.AUTO_REPLY_ATTACH_LOCATION] ?: false,
-                        autoReplyAttachedFileType = prefs[SettingsRepository.AUTO_REPLY_ATTACHED_FILE_TYPE] ?: "DOCUMENT"
+                        autoReplyAttachedFileType = prefs[SettingsRepository.AUTO_REPLY_ATTACHED_FILE_TYPE] ?: "DOCUMENT",
+                        allowedStarredDndContacts = prefs[SettingsRepository.ALLOWED_STARRED_DND_CONTACTS] ?: "",
+                        starredDndSelectionMode = prefs[SettingsRepository.STARRED_DND_SELECTION_MODE] ?: "SELECTED_STARRED",
+                        autoReplyHourlyLimitPerContact = prefs[SettingsRepository.AUTO_REPLY_HOURLY_LIMIT_PER_CONTACT] ?: 3
                     )
                 }
             }
         }
+    }
+
+    fun updateAutoReplyHourlyLimitPerContact(value: Int) {
+        _uiState.update { it.copy(autoReplyHourlyLimitPerContact = value) }
+        viewModelScope.launch { settingsRepository.updateInt(SettingsRepository.AUTO_REPLY_HOURLY_LIMIT_PER_CONTACT, value) }
+    }
+
+    fun updateAllowedStarredDndContacts(value: String) {
+        _uiState.update { it.copy(allowedStarredDndContacts = value) }
+        viewModelScope.launch { settingsRepository.updateString(SettingsRepository.ALLOWED_STARRED_DND_CONTACTS, value) }
+    }
+
+    fun updateStarredDndSelectionMode(value: String) {
+        _uiState.update { it.copy(starredDndSelectionMode = value) }
+        viewModelScope.launch { settingsRepository.updateString(SettingsRepository.STARRED_DND_SELECTION_MODE, value) }
     }
     
     fun updateAutoReplyMaster(enabled: Boolean) {

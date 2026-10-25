@@ -329,12 +329,48 @@ object CallHandlingManager {
         }
     }
 
-    
+    private fun isStarredAndAllowed(context: Context, number: String): Boolean {
+        if (!isStarredContact(context, number)) return false
+        val settingsRepo = (context.applicationContext as com.example.ShieldApplication).container.settingsRepository
+        val mode = settingsRepo.getStringSync(com.example.data.repository.SettingsRepository.STARRED_DND_SELECTION_MODE, "SELECTED_STARRED")
+        if (mode == "ALL_STARRED") {
+            return true
+        }
+
+        // In SELECTED_STARRED mode, verify contact is in allowedStarredDndContacts
+        val allowedString = settingsRepo.getStringSync(com.example.data.repository.SettingsRepository.ALLOWED_STARRED_DND_CONTACTS, "")
+        if (allowedString.isBlank()) {
+            return false
+        }
+        val cleanNumber = number.filter { it.isDigit() }
+        val entries = allowedString.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        return entries.any { entry ->
+            val cleanEntry = entry.filter { it.isDigit() }
+            if (cleanEntry.isNotEmpty() && cleanNumber.isNotEmpty()) {
+                cleanEntry == cleanNumber ||
+                (cleanEntry.length >= 7 && cleanNumber.length >= 7 && cleanEntry.takeLast(10) == cleanNumber.takeLast(10))
+            } else false
+        }
+    }
+
     fun getRelationshipTier(context: Context, number: String): String {
+        val settingsRepo = (context.applicationContext as com.example.ShieldApplication).container.settingsRepository
+        val vipCallersString = settingsRepo.getStringSync(com.example.data.repository.SettingsRepository.VIP_CALLERS, "")
+        val cleanIncoming = number.replace(Regex("[^0-9]"), "")
+
+        if (vipCallersString.isNotBlank() && cleanIncoming.isNotEmpty()) {
+            val vips = vipCallersString.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val isExplicitVip = vips.any { vip ->
+                val cleanVip = vip.filter { it.isDigit() }
+                if (cleanVip.isNotEmpty()) {
+                    cleanVip == cleanIncoming || (cleanVip.length >= 7 && cleanIncoming.length >= 7 && cleanVip.takeLast(10) == cleanIncoming.takeLast(10))
+                } else false
+            }
+            if (isExplicitVip) return "Inner Circle"
+        }
+
         val phoneRuleRepo = (context.applicationContext as com.example.ShieldApplication).container.phoneRuleRepository
         val rules = phoneRuleRepo.getAllRulesSync()
-        
-        val cleanIncoming = number.replace(Regex("[^0-9]"), "")
         val rule = rules.find { 
             val cleanRule = it.phoneNumber.replace(Regex("[^0-9]"), "")
             if (cleanRule.isEmpty() || cleanIncoming.isEmpty()) false
@@ -351,7 +387,7 @@ object CallHandlingManager {
             if (rule.relationshipTier == "Standard") return "Standard"
         }
         
-        if (isStarredContact(context, number)) {
+        if (isStarredAndAllowed(context, number)) {
             return "Inner Circle"
         }
         

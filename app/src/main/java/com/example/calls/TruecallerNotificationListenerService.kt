@@ -31,25 +31,6 @@ class TruecallerNotificationListenerService : NotificationListenerService() {
                 handleWhatsAppMessage(sbn, title, text)
             }
         }
-
-        // Check if Smart Spam Reader is enabled
-        val settingsRepo = (applicationContext as ShieldApplication).container.settingsRepository
-        val smartSpamEnabled = settingsRepo.getBooleanSync(SettingsRepository.SMART_SPAM_READER, false)
-        
-        if (!smartSpamEnabled) return
-
-        if (packageName.contains("truecaller", ignoreCase = true)) {
-            val lowerTitle = title.lowercase()
-            val lowerText = text.lowercase()
-            
-            Log.d("TruecallerNL", "Truecaller notification posted: Title=$title, Text=$text")
-            val isSpam = lowerTitle.contains("spam") || lowerText.contains("spam") || lowerTitle.contains("spammer") || lowerText.contains("spammer")
-            
-            if (isSpam) {
-                Log.d("TruecallerNL", "Spam signature detected via Notification Listener! Firing endCall().")
-                rejectCall(settingsRepo)
-            }
-        }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
@@ -129,6 +110,7 @@ class TruecallerNotificationListenerService : NotificationListenerService() {
         if (androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS)
             == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             try {
+                var isStarred = false
                 val cleanDigits = callerTitle.replace(Regex("[^0-9]"), "")
                 if (cleanDigits.length >= 6) {
                     val uri = android.net.Uri.withAppendedPath(
@@ -143,24 +125,46 @@ class TruecallerNotificationListenerService : NotificationListenerService() {
                         if (cursor.moveToFirst()) {
                             val idx = cursor.getColumnIndex(android.provider.ContactsContract.PhoneLookup.STARRED)
                             if (idx >= 0 && cursor.getInt(idx) == 1) {
-                                return true
+                                isStarred = true
                             }
                         }
                     }
                 }
 
-                contentResolver.query(
-                    android.provider.ContactsContract.Contacts.CONTENT_URI,
-                    arrayOf(android.provider.ContactsContract.Contacts.STARRED),
-                    "${android.provider.ContactsContract.Contacts.DISPLAY_NAME} = ? OR ${android.provider.ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} = ?",
-                    arrayOf(callerTitle, callerTitle),
-                    null
-                )?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val idx = cursor.getColumnIndex(android.provider.ContactsContract.Contacts.STARRED)
-                        if (idx >= 0 && cursor.getInt(idx) == 1) {
-                            return true
+                if (!isStarred) {
+                    contentResolver.query(
+                        android.provider.ContactsContract.Contacts.CONTENT_URI,
+                        arrayOf(android.provider.ContactsContract.Contacts.STARRED),
+                        "${android.provider.ContactsContract.Contacts.DISPLAY_NAME} = ? OR ${android.provider.ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} = ?",
+                        arrayOf(callerTitle, callerTitle),
+                        null
+                    )?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val idx = cursor.getColumnIndex(android.provider.ContactsContract.Contacts.STARRED)
+                            if (idx >= 0 && cursor.getInt(idx) == 1) {
+                                isStarred = true
+                            }
                         }
+                    }
+                }
+
+                if (isStarred) {
+                    val mode = settingsRepo.getStringSync(SettingsRepository.STARRED_DND_SELECTION_MODE, "SELECTED_STARRED")
+                    if (mode == "ALL_STARRED") {
+                        return true
+                    }
+                    val allowed = settingsRepo.getStringSync(SettingsRepository.ALLOWED_STARRED_DND_CONTACTS, "")
+                    if (allowed.isNotBlank()) {
+                        val entries = allowed.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        val matched = entries.any { entry ->
+                            val cleanEntry = entry.replace(Regex("[^0-9]"), "")
+                            val cleanCaller = callerTitle.replace(Regex("[^0-9]"), "")
+                            entry.contains(callerTitle, ignoreCase = true) ||
+                            callerTitle.contains(entry.substringBefore("(").trim(), ignoreCase = true) ||
+                            (cleanEntry.isNotEmpty() && cleanCaller.isNotEmpty() &&
+                             (cleanEntry == cleanCaller || (cleanEntry.length >= 7 && cleanCaller.length >= 7 && cleanEntry.takeLast(10) == cleanCaller.takeLast(10))))
+                        }
+                        if (matched) return true
                     }
                 }
             } catch (e: Exception) {
@@ -493,13 +497,14 @@ class TruecallerNotificationListenerService : NotificationListenerService() {
             com.example.shield.WhatsAppBotInterpreter.interpretMessage(this, details.senderTitle, rawText, settingsRepo)
         } else null
 
-        // Loop prevention: safety cap per contact/group (max 5 per hour)
+        // Loop prevention: safety cap per contact/group (user-configurable, default 3, 0 means unlimited)
+        val hourlyLimit = settingsRepo.getIntSync(SettingsRepository.AUTO_REPLY_HOURLY_LIMIT_PER_CONTACT, 3)
         val hourStart = prefs.getLong("time_$cleanKey", 0L)
         var count = prefs.getInt("count_$cleanKey", 0)
         val hourReset = now - hourStart > 3600000
         if (!isEmergency) {
-            if (!hourReset && count >= 5) {
-                Log.d("TruecallerNL", "WhatsApp hourly safety cap reached for $cleanKey")
+            if (hourlyLimit > 0 && !hourReset && count >= hourlyLimit) {
+                Log.d("TruecallerNL", "WhatsApp hourly safety cap ($hourlyLimit/hr) reached for $cleanKey")
                 return
             }
         }

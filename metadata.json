@@ -1,6 +1,6 @@
 {
   "name": "Availo",
-  "description": "A privacy-first personal boundary automation engine for calls, SMS, and WhatsApp auto-replies.",
+  "description": "A privacy-first personal boundary and focus manager with native call screening, smart WhatsApp auto-reply, and granular Starred Contacts DND control.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

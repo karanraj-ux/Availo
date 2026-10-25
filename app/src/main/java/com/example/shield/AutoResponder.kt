@@ -181,7 +181,10 @@ object AutoResponder {
             prefs.edit().putInt("global_sms_count", globalSmsCount + 1).apply()
         }
 
-        // Per-Contact Cooldown: max 3 replies per hour
+        // Per-Contact Cooldown: user-configurable limit (default 3, 0 means unlimited)
+        val settingsRepo = (context.applicationContext as com.example.ShieldApplication).container.settingsRepository
+        val contactHourlyLimit = settingsRepo.getIntSync(com.example.data.repository.SettingsRepository.AUTO_REPLY_HOURLY_LIMIT_PER_CONTACT, 3)
+
         val lastReplyTime = prefs.getLong("time_$strippedNumber", 0L)
         val replyCount = prefs.getInt("count_$strippedNumber", 0)
         if (currentTime - lastReplyTime > 3600000) {
@@ -191,8 +194,8 @@ object AutoResponder {
                 .apply()
             return true
         }
-        if (replyCount >= 3) {
-            Log.w("AutoResponder", "Loop Prevention: Rate limit exceeded for auto-replies to $strippedNumber")
+        if (contactHourlyLimit > 0 && replyCount >= contactHourlyLimit) {
+            Log.w("AutoResponder", "Loop Prevention: Rate limit ($contactHourlyLimit/hr) reached for auto-replies to $strippedNumber")
             return false
         }
         
